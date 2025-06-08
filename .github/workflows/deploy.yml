@@ -21,8 +21,6 @@ jobs:
         uses: actions/checkout@v4
 
       # 2. สร้างไฟล์ .env จาก GitHub Secrets
-      - name: Create .env file
-        run: echo "${{ secrets.DOT_ENV }}" > .env
 
       # 3. ติดตั้ง PHP และ Dependencies (เพื่อทดสอบเบื้องต้น)
       - name: Setup PHP
@@ -44,7 +42,7 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
             # เข้าไปที่โฟลเดอร์โปรเจกต์
-            cd /var/www/laravel
+            cd /var/www
 
             # เข้าสู่ Maintenance Mode
             php artisan down
