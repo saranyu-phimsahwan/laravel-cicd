@@ -32,7 +32,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
-            cd /var/www/laravel
+            cd /var/www/htm/laravel
 
             php artisan down
 
