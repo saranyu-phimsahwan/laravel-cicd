@@ -1,0 +1,69 @@
+# ชื่อของ Workflow
+name: Deploy Laravel to DigitalOcean
+
+# กำหนด Event ที่จะให้ Workflow ทำงาน
+# ในที่นี้คือเมื่อมีการ push ไปยัง branch 'main'
+on:
+  push:
+    branches:
+      - main
+
+# Jobs คือกลุ่มของงานที่จะรัน
+jobs:
+  deploy:
+    # ใช้ Runner ของ GitHub ที่เป็น Ubuntu เวอร์ชันล่าสุด
+    runs-on: ubuntu-latest
+
+    # Steps คือลำดับของคำสั่งที่จะรัน
+    steps:
+      # 1. Checkout โค้ดจาก Repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. สร้างไฟล์ .env จาก GitHub Secrets
+      - name: Create .env file
+        run: echo "${{ secrets.DOT_ENV }}" > .env
+
+      # 3. ติดตั้ง PHP และ Dependencies (เพื่อทดสอบเบื้องต้น)
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3" # แก้เป็นเวอร์ชัน PHP ที่คุณใช้
+          extensions: mbstring, xml, ctype, json, tokenizer,mongodb,redis
+          tools: composer
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-dev --optimize-autoloader
+
+      # 4. SSH เข้าไปที่เซิร์ฟเวอร์และรันสคริปต์ Deploy
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            # เข้าไปที่โฟลเดอร์โปรเจกต์
+            cd /var/www/laravel
+
+            # เข้าสู่ Maintenance Mode
+            php artisan down
+
+            # ดึงโค้ดล่าสุดจาก Branch main
+            git pull origin main
+
+            # ติดตั้ง PHP Dependencies (สำหรับ Production)
+            composer install --no-dev --optimize-autoloader
+
+            # Run Database Migrations
+            # ใช้ --force เพราะเป็น non-interactive environment
+            php artisan migrate --force
+
+            # เคลียร์ Cache เพื่อให้การตั้งค่าใหม่มีผล
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan view:clear
+            php artisan route:clear
+
+            # ออกจาก Maintenance Mode
+            php artisan up
